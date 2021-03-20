@@ -50,7 +50,7 @@ ifneq (,$(filter userdebug eng, $(TARGET_BUILD_VARIANT)))
 endif
 
 ifeq ($(SEC_BUILD_OPTION_VTS), true)
-$(warning [DEFEX] VTS true $(SEC_BUILD_OPTION_VTS))
+#$(warning [DEFEX] VTS true $(SEC_BUILD_OPTION_VTS))
 EXTRA_CFLAGS += -DDEFEX_PERMISSIVE_SP
 EXTRA_CFLAGS += -DDEFEX_PERMISSIVE_PED
 else
