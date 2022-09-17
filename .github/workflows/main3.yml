@@ -1,0 +1,55 @@
+name: NeoKernel Builder
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  watch:
+    types: started
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    if: github.event.repository.owner.id == github.event.sender.id
+    steps:
+    - uses: actions/checkout@v2
+    - name: for aarch64
+      run: sudo apt-get install ccache && mkdir -p ../PLATFORM/prebuilts/gcc/linux-x86/aarch64 && git clone  https://github.com/djb77/aarch64-linux-android-4.9 ../PLATFORM/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
+    
+    - name: Make G9500 kernel
+      run:  |
+        make clean && make mrproper
+        export ARCH=arm64
+        export BUILD_CROSS_COMPILE=$(pwd)/../PLATFORM/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin/aarch64-linux-android-
+        export BUILD_JOB_NUMBER=`grep processor /proc/cpuinfo|wc -l`
+        export ANDROID_MAJOR_VERSION=p
+        export PLATFORM_VERSION=9.0.0
+        mkdir out 
+        chmod -R 777 out      
+        make -C $(pwd) O=$(pwd)/out -j$BUILD_JOB_NUMBER ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE KCFLAGS=-mno-android  dreamqlte_chn_open_defconfig
+        make -C $(pwd) O=$(pwd)/out -j$BUILD_JOB_NUMBER ARCH=$ARCH CROSS_COMPILE=$BUILD_CROSS_COMPILE KCFLAGS=-mno-android
+      
+    - name: Mod G9500 kernel
+      run: |
+        mv build/G9500.img build/boot.img
+        build/unpackimg.sh build/boot.img
+        mv build/boot.img build/G9500.img
+        cp -R out/arch/arm64/boot/Image.gz-dtb build/split_img/
+        rm -rf build/split_img/boot.img-zImage
+        mv build/split_img/Image.gz-dtb build/split_img/boot.img-zImage
+        sudo bash build/ramdisk.sh
+        build/repackimg.sh
+        mv build/image-new.img build/zip/boot.img
+        build/cleanup.sh
+             
+    - uses: actions/upload-artifact@v2
+      with:
+        name: SM-G9500
+        path: build/zip/
+        
+    - uses: actions/upload-artifact@v2
+      with:
+        name: Image.gz-dtb
+        path: out/arch/arm64/boot/        
